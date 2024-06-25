@@ -167,7 +167,7 @@ const algo = async () => {
 				throw new Error("conflicting reviews: both want approve and close");
 			}
 			else if (merge) {
-				console.log(` - merging`);
+				console.log(` - merging (${mergeMethod})`);
 				DRY_RUN || await mergePR(ghAuth, { prNumber: prNum, method: mergeMethod });
 			}
 			else if (close) {
