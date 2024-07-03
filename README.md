@@ -104,6 +104,8 @@ is skipped.
 | Request changes | `{ action: 'request-changes', changes: '... please do so and so ...' }` | Request changes to be made. Use the description field to summarize what is wrong. |
 | Review by adding a comment | `{ action: 'review-comment', comment: 'Please ...', path: 'relative path of the file to change', line: 1}` | This will begin or continue a review of a PR and will expect it to be Resolved. Use the required `path` + `line` to specify where the problem originates. |
 | Update branch | `{ action: 'update-branch' }` | Update your pull request with all the changes from the base branch, by merging it in. This is best used with `await pr.behindOnBase()` to avoid updating the PR branch with empty commits.  |
+| | | |
+| After review handler | `{ action: 'after-review', handler: async (pr) => { /**/ } }` | **EXPERIMENTAL** After all reviewers processed a PR and all desired actions have been taken (best effort), you can still take post-action steps. This is happens synchronously before moving to the next PR. In this `async` after-review handler, you can chain follow-up commands, add artificial delays, ... Although you can still access PR details (see below how `pr` is exposing details), the state of `pr` in memory is likely stale and does not reflect the state in Github. |
 
 ### Avoiding repeated reviewing
 
