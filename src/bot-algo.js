@@ -100,6 +100,7 @@ const algo = async () => {
 			const mergeMethod = (allActions.find(a => a.action === 'merge' && a.method) || { method: 'merge' }).method;
 			const close = allActions.find(a => a.action === 'close');
 			const shouldUpdateBranch = allActions.find(a => a.action === 'update-branch');
+			const afterReviews = allActions.filter(a => a.action === 'after-review');
 			
 			// Group all the labels we want to add
 			const allAddLabels = addLabels.map(l => l.labels).flat();
@@ -173,6 +174,15 @@ const algo = async () => {
 			else if (close) {
 				console.log(` - closing, do not want`);
 				DRY_RUN || await closePR(ghAuth, { prNumber: prNum });
+			}
+			
+			for (const ar of afterReviews) {
+				if (!ar.handler) {
+					throw new Error("Found a after-review, but no 'handler' is defined")
+				}
+
+				console.log(` + triggering after-review 'handler'`);
+				DRY_RUN || await ar.handler(pr);
 			}
 		}
 		catch (err) {
