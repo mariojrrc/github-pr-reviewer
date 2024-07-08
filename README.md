@@ -90,22 +90,187 @@ module.exports = {
 ### Take actions on PR's
 
 Actions are taken by returning one or more action definitions from the `review(pr) { ... }`
-function. If conflicting actions need to be taken on a PR, a error will occur and the PR
+function. If conflicting actions need to be taken on a PR, an error will occur and the PR
 is skipped.
 
-| Action | Spec | Docs |
-| -------- | ---- | ---- |
-| Approving | `{ action: 'approve' }` | The user running the reviewer will approve the PR |
-| Closing | `{ action: 'close' }` | The user running the reviewer will close the PR |
-| Adding a comment | `{ action: 'comment', comment: '...' }` | A message will be added to the PR (not to the files). |
-| Labeling a PR | `{ action: 'label', labels: [ 'A', 'B' ] }` | Add one or more labels to the PR. Non-existing labels will automatically be created by Github |
-| Unlabeling a PR | `{ action: 'unlabel', label: 'A'}` | Remove a single label from a PR. Note that you cannot use an array for this action. |
-| Merge a PR | `{ action: 'merge', method?: 'merge\|squash\|rebase' }` | The user will attempt to merge (which might fail if some repo requirements are not met). Use the `method` value to choose the merge strategy, or omit for the default `merge`. |
-| Request changes | `{ action: 'request-changes', changes: '... please do so and so ...' }` | Request changes to be made. Use the description field to summarize what is wrong. |
-| Review by adding a comment | `{ action: 'review-comment', comment: 'Please ...', path: 'relative path of the file to change', line: 1}` | This will begin or continue a review of a PR and will expect it to be Resolved. Use the required `path` + `line` to specify where the problem originates. |
-| Update branch | `{ action: 'update-branch' }` | Update your pull request with all the changes from the base branch, by merging it in. This is best used with `await pr.behindOnBase()` to avoid updating the PR branch with empty commits.  |
-| | | |
-| After review handler | `{ action: 'after-review', handler: async (pr) => { /**/ } }` | **EXPERIMENTAL** After all reviewers processed a PR and all desired actions have been taken (best effort), you can still take post-action steps. This is happens synchronously before moving to the next PR. In this `async` after-review handler, you can chain follow-up commands, add artificial delays, ... Although you can still access PR details (see below how `pr` is exposing details), the state of `pr` in memory is likely stale and does not reflect the state in Github. |
+<table>
+<tr>
+  <th>Action</th>
+  <th>Spec</th>
+  <th>Docs</th>
+</tr>
+
+<tr>
+  <td>Approving</td>
+  <td>
+
+```js
+{
+  action: 'approve'
+}
+```
+
+  </td>
+  <td>The user running the reviewer will approve the PR</td>
+</tr>
+
+<tr>
+  <td>Closing</td>
+  <td>
+
+```js
+{
+  action: 'close'
+}
+```
+
+  </td>
+  <td>The user running the reviewer will close the PR</td>
+</tr>
+
+<tr>
+  <td>Adding a comment</td>
+  <td>
+
+```js
+{
+  action: 'comment',
+  comment: '...'
+}
+```
+
+  </td>
+  <td>A message will be added to the PR (not to the files).</td>
+</tr>
+
+<tr>
+  <td>Labeling a PR</td>
+  <td>
+
+```js
+{
+  action: 'label',
+  labels: [ 'A', 'B' ]
+}
+```
+
+</td>
+  <td>Add one or more labels to the PR. Non-existing labels will automatically be created by Github</td>
+</tr>
+
+<tr>
+  <td>Unlabeling a PR</td>
+  <td>
+
+```js
+{
+  action: 'unlabel',
+  label: 'A'
+}
+```
+
+</td>
+  <td>Remove a single label from a PR. Note that you cannot use an array for this action.</td>
+</tr>
+
+<tr>
+  <td>Merge a PR</td>
+  <td>
+
+```js
+{
+  action: 'merge',
+  method: 'merge|squash|rebase'
+}
+```
+
+</td>
+  <td>The user will attempt to merge (which might fail if some repo requirements are not met). Use the <code>method</code> value to choose the merge strategy, or omit for the default <code>merge</code>.</td>
+</tr>
+
+<tr>
+  <td>Request changes</td>
+  <td>
+
+```js
+{
+  action: 'request-changes',
+  changes: '... please do so and so ...'
+}
+```
+
+</td>
+  <td>Request changes to be made. Use the description field to summarize what is wrong.</td>
+</tr>
+
+<tr>
+  <td>Review by adding a comment</td>
+  <td>
+
+```js
+{
+  action: 'review-comment',
+  comment: 'Please ...',
+  path: 'relative path of the file to change',
+  line: 1
+}
+```
+
+</td>
+  <td>This will begin or continue a review of a PR and will expect it to be Resolved. Use the required <code>path</code> + <code>line</code> to specify where the problem originates.</td>
+</tr>
+
+<tr>
+  <td>Update branch</td>
+  <td>
+
+```js
+{
+  action: 'update-branch'
+}
+```
+
+  </td>
+  <td>Update your pull request with all the changes from the base branch, by merging it in. This is best used with <code>await pr.behindOnBase()</code> to avoid updating the PR branch with empty commits.</td>
+</tr>
+
+<tr><td></td><td></td><td></td></tr>
+
+<tr>
+  <td>After review handler</td>
+  <td>
+
+```js
+{
+  action: 'after-review',
+  handler: async (pr, { actionsTaken }) => {
+    /**/
+  }
+}
+```
+
+Details on `actionsTaken`
+
+```js
+{
+  labelsAdded: [ 'A' ],
+  labelsRemoved: [ 'B' ],
+  commentsAdded: '.. all ... comments .. combined',
+  approved: false,
+  closed: false,
+  merged: 'merge|squash|rebase', // or null
+  changesRequested: [ 'change1' ],
+  reviewComments: [ 'comment1' ],
+  updateBranch: false
+}
+```
+
+  </td>
+  <td>
+    After all reviewers processed a PR and all desired actions have been taken (best effort), you can still take post-action steps. This is happens synchronously before moving to the next PR. In this <code>async</code> after-review handler, you can chain follow-up commands, add artificial delays, ... Although you can still access PR details (see below how <code>PR</code> is exposing details), the state of <code>PR</code> in memory is likely stale and does not reflect the state in Github. To facilitate decision making, each handler is called with a summary of the combined reviewers outcomes via the parameters <code>actionsTaken</code>.
+  </td>
+</tr>
+</table>
 
 ### Avoiding repeated reviewing
 
@@ -113,8 +278,8 @@ Note about avoiding the same actions: Github PR Reviewer does NOT keep any state
 It's up to you to implement persistence, if desired, into the `*.reviewer.js` files.
 
 However, a simple state can also be kept on the PR itself, by first retrieving information from the PR,
-and checking if a previous action is taken. For example, by add a comment with
-a magic word in it, and later, skipping PR's with that expected magic word in a comment (use `resolveComments`). This has the drawback that changes do not invalidate previous reviews, but works fine for simple cases.
+and checking if a previous action is taken. For example, by adding a comment with
+a magic word in it, and later, skipping PR's with that expected magic word in a comment (use `resolveComments`). (This has the drawback that changes do not invalidate previous reviews, but works fine for simple cases.)
 
 ### Resolving additional PR details
 
@@ -127,31 +292,37 @@ To avoid API limits, and speed up the reviewing, resolving additional data is op
   <th>Spec</th>
   <th>Description</th>
 </tr>
+
 <tr>
   <td>Base Branch</td>
   <td><code>await pr.resolveBaseBranch()</code></td>
-  <td>This will populate the PR data <code>pr.base_branch</code>, which is a object describing the Github the branch you provide. For full specification, check the Github specification at https://docs.github.com/en/rest/branches/branches#get-a-branch.</td>
+  <td>This will populate the PR data <code>pr.base_branch</code>, which is a object describing the Github the branch you provide. For full specification, check the <a href="https://docs.github.com/en/rest/branches/branches#get-a-branch">Github specification</a>.</td>
 </tr>
+
 <tr>
   <td>Checks</td>
   <td><code>await pr.resolveChecks()</code></td>
-  <td>This will populate the PR data <code>pr.checks</code>, which is an array of Github checks on the last commit sha of the PR branch. For full specification, check the Github check run specification at https://docs.github.com/en/rest/checks/runs?apiVersion=2022-11-28#list-check-runs-for-a-git-reference.<br />If it returns <code>true</code>, it can be called again to fetch another page, <code>false</code> means the end was reached.</td>
+  <td>This will populate the PR data <code>pr.checks</code>, which is an array of Github checks on the last commit sha of the PR branch. For full specification, check the <a href="https://docs.github.com/en/rest/checks/runs?apiVersion=2022-11-28#list-check-runs-for-a-git-reference">Github Check run specification</a>.<br />If it returns <code>true</code>, it can be called again to fetch another page, <code>false</code> means the end was reached.</td>
 </tr>
+
 <tr>
   <td>Commits</td>
   <td><code>await pr.resolveCommits()</code></td>
-  <td>This will populate the PR data <code>pr.commits</code>, which is an array of Github commits on the branch. For full specification, check the Github commit specification at https://docs.github.com/en/rest/issues/comments#get-an-issue-comment.<br />If it returns <code>true</code>, it can be called again to fetch another page, <code>false</code> means the end was reached.</td>
+  <td>This will populate the PR data <code>pr.commits</code>, which is an array of Github commits on the branch. For full specification, check the <a href="https://docs.github.com/en/rest/issues/comments#get-an-issue-comment">Github commit specification</a>.<br />If it returns <code>true</code>, it can be called again to fetch another page, <code>false</code> means the end was reached.</td>
 </tr>
+
 <tr>
   <td>Comments</td>
   <td><code>await pr.resolveComments()</code></td>
-  <td>This will populate the PR data <code>pr.comments</code>, which is an array of Github comment objects. For full specification, check the Github comment specification at https://docs.github.com/en/rest/pulls/pulls#list-commits-on-a-pull-request.<br />If it returns <code>true</code>, it can be called again to fetch another page, <code>false</code> means the end was reached.</td>
+  <td>This will populate the PR data <code>pr.comments</code>, which is an array of Github comment objects. For full specification, check the <a href="https://docs.github.com/en/rest/pulls/pulls#list-commits-on-a-pull-request">Github comment specification</a>.<br />If it returns <code>true</code>, it can be called again to fetch another page, <code>false</code> means the end was reached.</td>
 </tr>
+
 <tr>
   <td>Files</td>
   <td><code>await pr.resolveFiles()</code></td>
   <td>This will populate the PR data <code>pr.files</code>, which is a array of relative file paths (strings).<br />If it returns <code>true</code>, it can be called again to fetch another page, <code>false</code> means the end was reached.</td>
 </tr>
+
 <tr>
   <td>Patch / Diff</td>
   <td><code>await pr.resolvePatch()</code></td>
@@ -184,6 +355,7 @@ This will populate the PR data <code>pr.patch</code>, which contains both the or
 
   </td>
 </tr>
+
 <tr>
   <td>Reviews</td>
   <td><code>await pr.resolveReviews()</code></td>
@@ -192,7 +364,7 @@ This will populate the PR data <code>pr.patch</code>, which contains both the or
 <tr>
   <td>Status</td>
   <td><code>await pr.resolveStatus()</code></td>
-  <td>This will populate the PR data <code>pr.status</code>, which is an object. For full specification, check the Github commit status specification at https://docs.github.com/en/rest/commits/statuses#get-the-combined-status-for-a-specific-reference</td>
+  <td>This will populate the PR data <code>pr.status</code>, which is an object. For full specification, check the <a href="https://docs.github.com/en/rest/commits/statuses#get-the-combined-status-for-a-specific-reference">Github commit status specification</a>.</td>
 </tr>
 </table>
 
@@ -211,7 +383,7 @@ These methods are available during reviewer execution:
 </tr>
 <tr>
   <td><code>await pr.statusAndChecksOkay()</code></td>
-  <td>Returns <code>null</code> if the PR is checks and statuses are all succesful. If something is failing or not yet finished, this function returns a string summary of the first found issue. (this internally calls `resolveStatus` and `resolveChecks`.</td>
+  <td>Returns <code>null</code> if the PR is checks and statuses are all succesful. If something is failing or not yet finished, this function returns a string summary of the first found issue. (this internally calls <code>resolveStatus</code> and <code>resolveChecks</code>.</td>
 </tr>
 </table>
 

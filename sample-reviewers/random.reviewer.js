@@ -23,14 +23,18 @@ module.exports = {
 		// console.log(pr.status);
 		
 		const allActions = [
-			[{ action: 'approve' }],
-			[{ action: 'close' }],
-			[{ action: 'comment', comment: 'I like this' }],
-			[{ action: 'label', labels: ['A', 'B'] }],
-			[{ action: 'unlabel', label: 'A'}],
-			[{ action: 'request-changes', changes: 'This looks fuky'}],
-			[{ action: 'review-comment', comment: 'Better change this, i mean, come-on!', path: pr.files[0], line: 1}],
+			{ action: 'approve' },
+			{ action: 'close' },
+			{ action: 'comment', comment: 'I like this' },
+			{ action: 'label', labels: ['A', 'B'] },
+			{ action: 'unlabel', label: 'A'},
+			{ action: 'request-changes', changes: 'This looks fuky'},
+			{ action: 'review-comment', comment: 'Better change this, i mean, come-on!', path: pr.files[0], line: 1},
+			{ action: 'after-review', handler: async (pr) => {
+				console.log(`I have a pr? ${!!pr}`);
+			}},
 		];
-		return allActions[Math.floor(Math.random() * allActions.length)];
+
+		return [allActions[Math.floor(Math.random() * allActions.length)]];
 	}
 }
