@@ -70,6 +70,19 @@ const algo = async () => {
 			let allActions = [];
 			let reasonsWhyNot = [];
 			
+			// Will be filled with the outcomes of all combined actions
+			const actionsTaken = {
+				labelsAdded: [],
+				labelsRemoved: [],
+				commentsAdded: '',
+				approved: false,
+				closed: false,
+				merged: '',
+				changesRequested: [],
+				reviewComments: [],
+				updateBranch: false,
+			};
+			
 			for (const reviewer of reviewers) {
 				const newActions = await review({ reviewer, pr });
 				if (typeof newActions === 'string') {
@@ -110,11 +123,12 @@ const algo = async () => {
 			// Detect conflicting labels,
 			// that need to be added while deleted at the same time
 			const uniqueLabels = new Set([...allAddLabels, ...removeLabels]);
-			if (uniqueLabels.size != allAddLabels.length + removeLabels.length)
+			if (uniqueLabels.size != allAddLabels.length + removeLabels.length) {
 				throw new Error(
 					"Asked to add labels, while also asked to remove them: "
 					+ JSON.stringify(allAddLabels) + " vs " + JSON.stringify(removeLabels)
 				);
+			}
 			
 			if (allAddLabels.length) {
 				console.log(` - adding labels: ` + allAddLabels);
@@ -123,17 +137,23 @@ const algo = async () => {
 					prNumber: prNum,
 					labels: allAddLabels
 				});
+
+				actionsTaken.labelsAdded = [...allAddLabels];
 			}
 			
 			for (const label of removeLabels) {
 				console.log(` - removing label: ` + label);
 				DRY_RUN || await unlabelPR(ghAuth, { prNumber: prNum, label: label });
+
+				actionsTaken.labelsRemoved = [...removeLabels];
 			}
 			
 			if (comments.length) {
 				const fullBody = comments.map(c => c.comment).join('\n- - -\n');
 				console.log(` - adding comment:`, fullBody);
 				DRY_RUN || await commentPR(ghAuth, { prNumber: prNum, body: fullBody });
+
+				actionsTaken.commentsAdded = fullBody;
 			}
 			
 			for (const rc of reviewComments) {
@@ -146,22 +166,30 @@ const algo = async () => {
 						path: rc.path,
 						line: rc.line,
 					}));
+				
+					actionsTaken.reviewComments.push(rc.comment);
 			}
 			
 			for (const change of changesRequested) {
 				console.log(` - requesting changes:`, change.changes);
 				DRY_RUN ||
 					(await requestChanges(ghAuth, { prNumber: prNum, body: change.changes }));
+
+					actionsTaken.changesRequested.push(change.change);
 			}
 			
 			if (shouldUpdateBranch) {
 				console.log(` - updating branch with base`);
 				DRY_RUN || await updateBranch(ghAuth, { prNumber: prNum });
+
+				actionsTaken.updateBranch = true;
 			}
 			
 			if (approve) {
 				console.log(` - approving`);
 				DRY_RUN || await approvePR(ghAuth, { prNumber: prNum });
+				
+				actionsTaken.approved = true;
 			}
 			
 			if (merge && close) {
@@ -170,10 +198,23 @@ const algo = async () => {
 			else if (merge) {
 				console.log(` - merging (${mergeMethod})`);
 				DRY_RUN || await mergePR(ghAuth, { prNumber: prNum, method: mergeMethod });
+
+				actionsTaken.merged = true;
 			}
 			else if (close) {
 				console.log(` - closing, do not want`);
 				DRY_RUN || await closePR(ghAuth, { prNumber: prNum });
+
+				actionsTaken.merged = true;
+			}
+			
+			for (const ar of afterReviews) {
+				if (!ar.handler) {
+					throw new Error("Found a after-review, but no 'handler' is defined")
+				}
+
+				console.log(` + triggering after-review 'handler'`);
+				DRY_RUN || await ar.handler(pr, { actionsTaken });
 			}
 			
 			for (const ar of afterReviews) {
