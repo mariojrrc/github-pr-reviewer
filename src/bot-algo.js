@@ -216,15 +216,6 @@ const algo = async () => {
 				console.log(` + triggering after-review 'handler'`);
 				DRY_RUN || await ar.handler(pr, { actionsTaken });
 			}
-			
-			for (const ar of afterReviews) {
-				if (!ar.handler) {
-					throw new Error("Found a after-review, but no 'handler' is defined")
-				}
-
-				console.log(` + triggering after-review 'handler'`);
-				DRY_RUN || await ar.handler(pr);
-			}
 		}
 		catch (err) {
 			console.log(` - Wrapping up PR ${prNum} after error`, err.stack);
