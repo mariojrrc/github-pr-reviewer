@@ -64,7 +64,7 @@ module.exports = class PullRequest {
 	async statusAndChecksOkay() {
 		await this.resolveStatus();
 
-		if (this.status.state !== 'success') {
+		if (this.status.statuses.length && this.status.state !== 'success') {
 			return `Status not okay: ${this.status.state}`;
 		}
 
