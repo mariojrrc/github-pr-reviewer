@@ -1,6 +1,7 @@
 const { apiMethod, getJson, deleteJson, postJson, patchJson, putJson } = require('./utils.js');
 const PullRequest = require('./pull-request');
-const patchParser = require('./patch-parser');
+const patchDiff = require('./parse-diff.js');
+const parsePatch = require('./parse-patch.js');
 
 const pageSize = {
 	checks: 100,
@@ -62,6 +63,27 @@ const fetchPrLastCommitChecks = async ({ repo, user, pass }, commitID, { page = 
 	processGhResponse(checkRuns);
 
 	return checkRuns.check_runs;
+};
+
+const fetchPrDiff = async ({ repo, user, pass }, prID) => {
+
+	// SPEC http://git-scm.com/docs/git-format-patch
+	//      https://git-scm.com/docs/diff-format
+	//      http://git-scm.com/docs/git-diff
+	//      https://www.gnu.org/software/diffutils/manual/html_node/Detailed-Unified.html#Detailed%20Unified
+	//      https://stackoverflow.com/questions/2529441/how-to-read-the-output-from-git-diff
+	const headers = ghHeaders(user, pass);
+	headers['Accept'] = 'application/vnd.github.v3.diff';
+
+	const prDiff = await apiMethod(
+		'GET',
+		`https://api.github.com/repos/${repo}/pulls/${prID}`,
+		headers,
+		null,
+		false
+	);
+
+	return prDiff;
 };
 
 const fetchPrPatch = async ({ repo, user, pass }, prID) => {
@@ -234,6 +256,11 @@ const listPRs = async ({ repo, user, pass }, { page = 1, state } = defaultOpts) 
 			}
 
 			return true; // Indicate more can be fetched if desired
+		};
+		prObj.resolveDiff = async () => {
+			const diff = await fetchPrDiff({ repo, user, pass }, prObj.pr.number);
+			prObj.diff = parseDiff(diff);
+			prObj.resolveDiff = function () { };
 		};
 		prObj.resolveFiles = async () => {
 			const files = await fetchPrFiles({ repo, user, pass }, prObj.pr.number, { page: prObj.resolveFilesPage });

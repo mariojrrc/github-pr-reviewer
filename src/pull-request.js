@@ -13,6 +13,7 @@ module.exports = class PullRequest {
 		this.resolveCommentsPage = 1;
 		this.resolveCommits = null;
 		this.resolveCommitsPage = 1;
+		this.resolveDiff = null;
 		this.resolveFiles = null;
 		this.resolveFilesPage = 1;
 		this.resolvePatch = null;
@@ -28,6 +29,7 @@ module.exports = class PullRequest {
 		this.files = null;
 		this.diff = null;
 		this.reviews = null;
+		this.patch = null;
 		this.status = null;
 
 		// Parse the PR info to get age information,
@@ -65,13 +67,14 @@ module.exports = class PullRequest {
 		await this.resolveStatus();
 
 		if (this.status.statuses.length && this.status.state !== 'success') {
+			// TODO Add name of status
 			return `Status not okay: ${this.status.state}`;
 		}
 
 		while (await this.resolveChecks()) {
 		}
 
-		const firstBad = this.checks.find(c =>  c.conclusion !== 'success');
+		const firstBad = this.checks.find(c => c.conclusion !== 'success');
 
 		if (firstBad) {
 			return `Github check not okay: ${firstBad.name} = ${firstBad.conclusion} ${firstBad.html_url}`;

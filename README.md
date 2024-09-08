@@ -324,11 +324,43 @@ To avoid API limits, and speed up the reviewing, resolving additional data is op
 </tr>
 
 <tr>
-  <td>Patch / Diff</td>
+  <td>Diff</td>
+  <td><code>await pr.resolveDiff()</code></td>
+  <td>
+This will populate the PR data <code>pr.diff</code>, which contains both the original git-diff content as <code>raw</code>, but also a parsed version for easier investigation.
+
+```js
+{
+  raw: 'From d3c...46c Mon Sep 17 00:00:00 2001...',
+  header: 'parsed diff header',
+  diffs: [
+    {
+      sourceFile: 'package.json', // Empty string if it's a new file
+      targetFile: 'package.json-backup', // Empty string if it's a deleted file
+      hunks: [
+        {
+          linesAdded: 1,
+          linesRemoved: 1,
+          lineChanges: 2,
+          rawChanges: '...',
+          addedLines: [ '  "main": "index.js"' ],
+          removedLines: [ '  "main": "entry.js"' ]
+        }
+      ]
+    }
+  ]
+}
+```
+
+  </td>
+</tr>
+
+<tr>
+  <td>Patch</td>
   <td><code>await pr.resolvePatch()</code></td>
   <td>
 
-This will populate the PR data <code>pr.patch</code>, which contains both the original git-diff content, but also a parsed version for easier investigation.
+This will populate the PR data <code>pr.patch</code>, which contains both the original git-patch content as <code>raw</code>, but also a parsed version for easier investigation.
 
 ```js
 {

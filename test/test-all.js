@@ -1,2 +1,3 @@
 require('../src/utils.js');
-require('../src/patch-parser.js');
+require('../src/parse-diff.js');
+require('../src/parse-patch.js');
