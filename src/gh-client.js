@@ -281,7 +281,7 @@ const listPRs = async ({ repo, user, pass }, { page = 1, state } = defaultOpts) 
 		};
 		prObj.resolvePatch = async () => {
 			const patch = await fetchPrPatch({ repo, user, pass }, prObj.pr.number);
-			prObj.patch = patchParser(patch);
+			prObj.patch = parsePatch(patch);
 			prObj.resolvePatch = function () { };
 		};
 		prObj.resolveReviews = async () => {
