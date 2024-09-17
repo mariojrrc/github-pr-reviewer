@@ -64,7 +64,7 @@ const algo = async () => {
 			continue;
 		}
 		
-		console.log(`\nChecking PR ${prNum}\n ${pr.pr.head.repo.html_url}/pulls/${pr.pr.number}`);
+		console.log(`\nChecking PR ${prNum}\n ${pr.pr.head.repo.html_url}/pull/${pr.pr.number}`);
 
 		try {
 			let allActions = [];
