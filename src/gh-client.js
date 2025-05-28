@@ -1,6 +1,6 @@
 const { apiMethod, getJson, deleteJson, postJson, patchJson, putJson } = require('./utils.js');
 const PullRequest = require('./pull-request');
-const patchDiff = require('./parse-diff.js');
+const parseDiff = require('./parse-diff.js');
 const parsePatch = require('./parse-patch.js');
 
 const pageSize = {

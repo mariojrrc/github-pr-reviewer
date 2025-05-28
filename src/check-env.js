@@ -33,7 +33,7 @@ const REVIEWER_FOLDER = getArg('reviewer-folder') ||process.env.REVIEWER_FOLDER 
 const DRY_RUN = !!(getArg('dry-run') || getArg('dryrun') || process.env.DRY_RUN || process.env.DRYRUN || '');
 
 if (!GITHUB_PASS || !GITHUB_USER) {
-	throw new Error("Missing REVIEWER_GITHUB_USER/REVIEWER_GITHUB_PASS env");
+	throw new Error("Missing GITHUB_USER/GITHUB_PASS env");
 }
 
 if (!GITHUB_REPO) {

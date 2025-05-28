@@ -67,8 +67,7 @@ module.exports = class PullRequest {
 		await this.resolveStatus();
 
 		if (this.status.statuses.length && this.status.state !== 'success') {
-			// TODO Add name of status
-			return `Status not okay: ${this.status.state}`;
+			return `Status not okay: ${this.status.state} for ${this.status.context} ${this.status.description}`;
 		}
 
 		while (await this.resolveChecks()) {
