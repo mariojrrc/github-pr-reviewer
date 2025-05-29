@@ -1,13 +1,12 @@
 # Github PR Reviewer
 
-> Why do a 10 minute task, when you can automate it in 10 days?
->
-> — a programmer
+> If you’re doing something more than twice, automate it.
 
-A `nodejs` based Github PR Reviewer which can be easily turned into a bot. This works on a GitHub repo, by finding (open) PR's
+A `nodejs` based Github PR Reviewer which can be easily turned into a bot. This works on a GitHub repo, by checking open PR's
 and taking actions on them.
 
-Github PR Reviewer makes it very easy to interact with pull requests, allowing you to focus fully on automating checks. Every PR will be passing through your own rule-set, and where needed, the actions you define will be executed for each PR.
+Github PR Reviewer makes it very easy to interact with pull requests, allowing you to focus fully on automating checks.
+Every PR will be passing through your own rule-set, and where needed, the actions you define will be executed for each PR.
 
 ## Installation
 
@@ -64,7 +63,7 @@ module.exports = {
     // (see Resolving additional PR details)
 
     // if this reviewer applies
-    return true; 
+    return true;
 
     // OR
     
@@ -83,9 +82,209 @@ module.exports = {
 
     // an empty array if no action is needed
     return []; 
-  }
-}
+  },
+};
 ```
+
+### Resolving additional PR details
+
+When Github is contacted for PR information, the default behaviour is to return basic PR data.
+To avoid API limits, and speed up the reviewing, resolving additional data is opt-in.
+
+<table>
+
+<tr>
+  <th>Resolver</th>
+  <th>Spec</th>
+  <th>Description</th>
+</tr>
+
+<tr>
+  <td>Standard fields</td>
+  <td></td>
+  <td>These fields are available on every pull request.
+
+```js
+  // filter: async (pr) => {
+  // review: async (pr) => {
+
+    // contains the raw PR data from GitHub
+    pr.pr = {
+      base: {
+        ref: 'main',
+      },
+      head: {
+        ref: 'my-feature',
+      },
+      labels: [
+        name: 'feature',
+      ],
+      user: {
+        login: 'user-name',
+      },
+      updated_at: '2022-08-10T12:00:54Z',
+    };
+
+    // For convenience, the age of the PR is provided as numbers
+    pr.age = {
+      millis: 86400000,
+      hours: 24.0
+      days: 1.0,
+    };
+  // }
+```
+  </td>
+</tr>
+
+<tr>
+  <td>Base Branch</td>
+  <td><code>await pr.resolveBaseBranch()</code></td>
+  <td>This will populate the PR data <code>pr.base_branch</code>, which is a object describing the Github the branch you provide. For full specification, check the <a href="https://docs.github.com/en/rest/branches/branches#get-a-branch">Github specification</a>.</td>
+</tr>
+
+<tr>
+  <td>Checks</td>
+  <td><code>await pr.resolveChecks()</code></td>
+  <td>This will populate the PR data <code>pr.checks</code>, which is an array of Github checks on the last commit sha of the PR branch. For full specification, check the <a href="https://docs.github.com/en/rest/checks/runs?apiVersion=2022-11-28#list-check-runs-for-a-git-reference">Github Check run specification</a>.<br />If it returns <code>true</code>, it can be called again to fetch another page, <code>false</code> means the end was reached.</td>
+</tr>
+
+<tr>
+  <td>Commits</td>
+  <td><code>await pr.resolveCommits()</code></td>
+  <td>This will populate the PR data <code>pr.commits</code>, which is an array of Github commits on the branch. For full specification, check the <a href="https://docs.github.com/en/rest/issues/comments#get-an-issue-comment">Github commit specification</a>.<br />If it returns <code>true</code>, it can be called again to fetch another page, <code>false</code> means the end was reached.</td>
+</tr>
+
+<tr>
+  <td>Comments</td>
+  <td><code>await pr.resolveComments()</code></td>
+  <td>This will populate the PR data <code>pr.comments</code>, which is an array of Github comment objects. For full specification, check the <a href="https://docs.github.com/en/rest/pulls/pulls#list-commits-on-a-pull-request">Github comment specification</a>.<br />If it returns <code>true</code>, it can be called again to fetch another page, <code>false</code> means the end was reached.
+
+```js
+await pr.resolveComments();
+pr.comments = [
+  {
+    // ...
+    user: {
+      login: 'user-name',
+    },
+    body: 'What user-name wrote',
+      // ...
+  }
+];
+```
+  </td>
+</tr>
+
+<tr>
+  <td>Files</td>
+  <td><code>await pr.resolveFiles()</code></td>
+  <td>This will populate the PR data <code>pr.files</code>, which is a array of relative file paths (strings).<br />If it returns <code>true</code>, it can be called again to fetch another page, <code>false</code> means the end was reached.
+
+```js
+await pr.resolveFiles();
+pr.files = [
+  'package.json',
+  'package-lock.json'
+];
+```
+  </td>
+</tr>
+
+<tr>
+  <td>Diff</td>
+  <td><code>await pr.resolveDiff()</code></td>
+  <td>
+This will populate the PR data <code>pr.diff</code>, which contains both the original git-diff content as <code>raw</code>, but also a parsed version for easier investigation.
+
+```js
+await pr.resolveDiff();
+pr.diff = {
+  raw: 'From d3c...46c Mon Sep 17 00:00:00 2001...',
+  header: 'parsed diff header',
+  diffs: [
+    {
+      sourceFile: 'package.json', // Empty string if it's a new file
+      targetFile: 'package.json-backup', // Empty string if it's a deleted file
+      hunks: [
+        {
+          linesAdded: 1,
+          linesRemoved: 1,
+          lineChanges: 2,
+          rawChanges: '...',
+          addedLines: [ '  "main": "index.js"' ],
+          removedLines: [ '  "main": "entry.js"' ]
+        }
+      ]
+    }
+  ]
+};
+```
+
+  </td>
+</tr>
+
+<tr>
+  <td>Patch</td>
+  <td><code>await pr.resolvePatch()</code></td>
+  <td>
+
+This will populate the PR data <code>pr.patch</code>, which contains both the original git-patch content as <code>raw</code>, but also a parsed version for easier investigation.
+
+```js
+await pr.resolvePatch();
+pr.patch = {
+  raw: 'From d3c...46c Mon Sep 17 00:00:00 2001...',
+  header: 'parsed patch header',
+  diffs: [
+    {
+      sourceFile: 'package.json', // Empty string if it's a new file
+      targetFile: 'package.json-backup', // Empty string if it's a deleted file
+      hunks: [
+        {
+          linesAdded: 1,
+          linesRemoved: 1,
+          lineChanges: 2,
+          rawChanges: '...',
+          addedLines: [ '  "main": "index.js"' ],
+          removedLines: [ '  "main": "entry.js"' ]
+        }
+      ]
+    }
+  ]
+};
+```
+
+  </td>
+</tr>
+
+<tr>
+  <td>Reviews</td>
+  <td><code>await pr.resolveReviews()</code></td>
+  <td>This will populate the PR data <code>pr.reviews</code>, which is an array of objects.<br />If it returns <code>true</code>, it can be called again to fetch another page, <code>false</code> means the end was reached.
+
+```js
+await pr.resolveReviews();
+pr.reviews = [
+  {
+    // ...
+    user: {
+      login: 'user-name',
+    }
+    state: 'APPROVED',
+      // ...
+  }
+]
+```
+  </td>
+</tr>
+
+<tr>
+  <td>Status</td>
+  <td><code>await pr.resolveStatus()</code></td>
+  <td>This will populate the PR data <code>pr.status</code>, which is an object. For full specification, check the <a href="https://docs.github.com/en/rest/commits/statuses#get-the-combined-status-for-a-specific-reference">Github commit status specification</a>.</td>
+</tr>
+
+</table>
 
 ### Take actions on PR's
 
@@ -144,7 +343,7 @@ is skipped.
 </tr>
 
 <tr>
-  <td>Labeling a PR</td>
+  <td>Adding a label</td>
   <td>
 
 ```js
@@ -159,7 +358,7 @@ is skipped.
 </tr>
 
 <tr>
-  <td>Unlabeling a PR</td>
+  <td>Remove a label</td>
   <td>
 
 ```js
@@ -217,7 +416,7 @@ is skipped.
 ```
 
 </td>
-  <td>This will begin or continue a review of a PR and will expect it to be Resolved. Use the required <code>path</code> + <code>line</code> to specify where the problem originates.</td>
+  <td>This will begin or continue a review of a PR and will expect it to be Resolved. Use the required <code>path</code> + <code>line</code> to specify where comment belongs.</td>
 </tr>
 
 <tr>
@@ -272,134 +471,6 @@ Details on `actionsTaken`
 </tr>
 </table>
 
-### Avoiding repeated reviewing
-
-Note about avoiding the same actions: Github PR Reviewer does NOT keep any state on previously taken actions.
-It's up to you to implement persistence, if desired, into the `*.reviewer.js` files.
-
-However, a simple state can also be kept on the PR itself, by first retrieving information from the PR,
-and checking if a previous action is taken. For example, by adding a comment with
-a magic word in it, and later, skipping PR's with that expected magic word in a comment (use `resolveComments`). (This has the drawback that changes do not invalidate previous reviews, but works fine for simple cases.)
-
-### Resolving additional PR details
-
-When Github is contacted for PR information, the default behaviour is to return some basic set of data on every PR.
-To avoid API limits, and speed up the reviewing, resolving additional data is opt-in.
-
-<table>
-<tr>
-  <th>Resolver</th>
-  <th>Spec</th>
-  <th>Description</th>
-</tr>
-
-<tr>
-  <td>Base Branch</td>
-  <td><code>await pr.resolveBaseBranch()</code></td>
-  <td>This will populate the PR data <code>pr.base_branch</code>, which is a object describing the Github the branch you provide. For full specification, check the <a href="https://docs.github.com/en/rest/branches/branches#get-a-branch">Github specification</a>.</td>
-</tr>
-
-<tr>
-  <td>Checks</td>
-  <td><code>await pr.resolveChecks()</code></td>
-  <td>This will populate the PR data <code>pr.checks</code>, which is an array of Github checks on the last commit sha of the PR branch. For full specification, check the <a href="https://docs.github.com/en/rest/checks/runs?apiVersion=2022-11-28#list-check-runs-for-a-git-reference">Github Check run specification</a>.<br />If it returns <code>true</code>, it can be called again to fetch another page, <code>false</code> means the end was reached.</td>
-</tr>
-
-<tr>
-  <td>Commits</td>
-  <td><code>await pr.resolveCommits()</code></td>
-  <td>This will populate the PR data <code>pr.commits</code>, which is an array of Github commits on the branch. For full specification, check the <a href="https://docs.github.com/en/rest/issues/comments#get-an-issue-comment">Github commit specification</a>.<br />If it returns <code>true</code>, it can be called again to fetch another page, <code>false</code> means the end was reached.</td>
-</tr>
-
-<tr>
-  <td>Comments</td>
-  <td><code>await pr.resolveComments()</code></td>
-  <td>This will populate the PR data <code>pr.comments</code>, which is an array of Github comment objects. For full specification, check the <a href="https://docs.github.com/en/rest/pulls/pulls#list-commits-on-a-pull-request">Github comment specification</a>.<br />If it returns <code>true</code>, it can be called again to fetch another page, <code>false</code> means the end was reached.</td>
-</tr>
-
-<tr>
-  <td>Files</td>
-  <td><code>await pr.resolveFiles()</code></td>
-  <td>This will populate the PR data <code>pr.files</code>, which is a array of relative file paths (strings).<br />If it returns <code>true</code>, it can be called again to fetch another page, <code>false</code> means the end was reached.</td>
-</tr>
-
-<tr>
-  <td>Diff</td>
-  <td><code>await pr.resolveDiff()</code></td>
-  <td>
-This will populate the PR data <code>pr.diff</code>, which contains both the original git-diff content as <code>raw</code>, but also a parsed version for easier investigation.
-
-```js
-{
-  raw: 'From d3c...46c Mon Sep 17 00:00:00 2001...',
-  header: 'parsed diff header',
-  diffs: [
-    {
-      sourceFile: 'package.json', // Empty string if it's a new file
-      targetFile: 'package.json-backup', // Empty string if it's a deleted file
-      hunks: [
-        {
-          linesAdded: 1,
-          linesRemoved: 1,
-          lineChanges: 2,
-          rawChanges: '...',
-          addedLines: [ '  "main": "index.js"' ],
-          removedLines: [ '  "main": "entry.js"' ]
-        }
-      ]
-    }
-  ]
-}
-```
-
-  </td>
-</tr>
-
-<tr>
-  <td>Patch</td>
-  <td><code>await pr.resolvePatch()</code></td>
-  <td>
-
-This will populate the PR data <code>pr.patch</code>, which contains both the original git-patch content as <code>raw</code>, but also a parsed version for easier investigation.
-
-```js
-{
-  raw: 'From d3c...46c Mon Sep 17 00:00:00 2001...',
-  header: 'parsed patch header',
-  diffs: [
-    {
-      sourceFile: 'package.json', // Empty string if it's a new file
-      targetFile: 'package.json-backup', // Empty string if it's a deleted file
-      hunks: [
-        {
-          linesAdded: 1,
-          linesRemoved: 1,
-          lineChanges: 2,
-          rawChanges: '...',
-          addedLines: [ '  "main": "index.js"' ],
-          removedLines: [ '  "main": "entry.js"' ]
-        }
-      ]
-    }
-  ]
-}
-```
-
-  </td>
-</tr>
-
-<tr>
-  <td>Reviews</td>
-  <td><code>await pr.resolveReviews()</code></td>
-  <td>This will populate the PR data <code>pr.reviews</code>, which is an array of objects.<br />If it returns <code>true</code>, it can be called again to fetch another page, <code>false</code> means the end was reached.</td>
-</tr>
-<tr>
-  <td>Status</td>
-  <td><code>await pr.resolveStatus()</code></td>
-  <td>This will populate the PR data <code>pr.status</code>, which is an object. For full specification, check the <a href="https://docs.github.com/en/rest/commits/statuses#get-the-combined-status-for-a-specific-reference">Github commit status specification</a>.</td>
-</tr>
-</table>
-
 ### Extra helpers available on PRs
 
 These methods are available during reviewer execution:
@@ -418,6 +489,22 @@ These methods are available during reviewer execution:
   <td>Returns <code>null</code> if the PR is checks and statuses are all succesful. If something is failing or not yet finished, this function returns a string summary of the first found issue. (this internally calls <code>resolveStatus</code> and <code>resolveChecks</code>.</td>
 </tr>
 </table>
+
+### Avoiding repeated reviewing
+
+Note about avoiding the same actions: Github PR Reviewer does NOT keep any state on previously taken actions.
+It's up to you to implement state, if desired, into the `*.reviewer.js` files.
+
+However, state can also be kept on the PR itself, by first retrieving information from the PR,
+and checking if a previous action is taken. For example, by adding a comment with
+a magic word in it, and later, skipping PR's with that expected magic word in a comment (use `resolveComments`). (This has the drawback that changes do not invalidate previous reviews, but works fine for simple cases.)
+
+### Ideas and suggestions
+
+- Automatically merge package upgrade branches
+- Sync all open branches at night
+- Add a label if a test is missing
+- Merge a PR after CI passes
 
 ### Testing your reviewer before putting it live
 
