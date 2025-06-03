@@ -73,7 +73,7 @@ module.exports = class PullRequest {
 		while (await this.resolveChecks()) {
 		}
 
-		const firstBad = this.checks.find(c => c.conclusion !== 'success');
+		const firstBad = this.checks.find(c => !['success', 'skipped', 'neutral'].includes(c.conclusion));
 
 		if (firstBad) {
 			return `Github check not okay: ${firstBad.name} = ${firstBad.conclusion} ${firstBad.html_url}`;
